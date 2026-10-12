@@ -1,0 +1,77 @@
+# Версия формата docker-compose.
+# Сейчас версия не обязательна (compose её сам определяет),
+# но оставим для совместимости.
+# version: "3.9"
+
+# Сервисы — это контейнеры, которые compose будет запускать.
+services:
+
+  # PostgreSQL — база данных.
+  postgres:
+    # Берём готовый образ PostgreSQL 17 из Docker Hub.
+    image: postgres:17
+    # Имя контейнера. По этому имени другие сервисы могут к нему обращаться.
+    container_name: todo-postgres
+    # Переменные окружения для PostgreSQL.
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: todo_db
+    # Проброс порта: 5433 на хосте → 5432 внутри контейнера.
+    # Хост — 5433, чтобы не конфликтовать с локальным PostgreSQL на Windows.
+    ports:
+      - "5433:5432"
+    # Volume — постоянное хранилище данных.
+    # Данные сохраняются, даже если контейнер удалить.
+    volumes:
+      - todo-postgres-data:/var/lib/postgresql/data
+    # Сеть, к которой подключён контейнер.
+    networks:
+      - todo-network
+    # Проверка готовности БД.
+    # API будет ждать, пока этот healthcheck не пройдёт.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d todo_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Backend — ASP.NET Core API.
+  api:
+    # Собираем образ из Dockerfile в папке backend.
+    build:
+      # Контекст сборки — папка backend.
+      context: ./backend
+      # Имя Dockerfile.
+      dockerfile: Dockerfile
+    # Имя контейнера.
+    container_name: todo-api
+    # Переменные окружения для API.
+    environment:
+      # Включаем Development-режим, чтобы работал Swagger.
+      ASPNETCORE_ENVIRONMENT: Development
+      # Строка подключения к БД.
+      # Host=postgres — имя сервиса (контейнера) PostgreSQL.
+      # Port=5432 — внутренний порт PostgreSQL (не 5433!).
+      # Внутри Docker-сети контейнеры общаются по внутренним портам.
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=todo_db;Username=postgres;Password=postgres"
+    # Проброс порта: 8080 на хосте → 8080 в контейнере.
+    ports:
+      - "8080:8080"
+    # Зависимости: api не запустится, пока не будет готов postgres.
+    depends_on:
+      postgres:
+        # Ждём, пока healthcheck БД пройдёт успешно.
+        condition: service_healthy
+    # Сеть.
+    networks:
+      - todo-network
+
+# Сети, которые создаются автоматически.
+networks:
+  todo-network:
+    driver: bridge
+
+# Volumes — постоянные хранилища данных.
+volumes:
+  todo-postgres-data:

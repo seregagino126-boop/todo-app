@@ -1,0 +1,24 @@
+# ============ Backend (.NET) ============
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# ============ Frontend (Node) ============
+node_modules/
+dist/
+.vite/
+
+# ============ IDE ============
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# ============ OS ============
+.DS_Store
+Thumbs.db
+
+# ============ Env ============
+.env
+.env.local
