@@ -3,7 +3,7 @@ import {ref, onMounted} from 'vue'
 import TaskForm from './components/TaskForm.vue'
 import TaskList from './components/TaskList.vue'
 
-const API_URL = 'http://localhost:8080/api/tasks'
+const API_URL = '/api/tasks'
 const tasks = ref([])
 
 //Загражаем задачи с Backend
